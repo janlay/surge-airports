@@ -12,19 +12,28 @@
  * Dler = content="Refresh to load data.", script-name=dler
  * 
  * [Script]
- * dler = script-path=airport-bar.js, type=generic, argument=https://dler.cloud/subscribe/token?header=true
- * cron "0 7 * * *" script-path=airport-bar.js, argument=https://host/subscribe/path;3;month
+ * dler = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path
+ * dler = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path;0
+ * dler = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/token?header=true;-1
  * ---- config ends ----
  * 
- * `arguments` in Section `Script`:
+ * `argument` in Section `Script`:
  *   format: url[;interval;period]
- *   `url` must be provided.
- *   defaults: interval: 1; period: month
+ *     - `url`: required. URL of the subscription.
+ *     - `interval`: optional. Interval of reset time of the plan
+ *     - `period`: optional. Period of reset time of the plan
+ *   defaults:
+ *     - `interval`: `1`
+ *     - `period`: `month`
+ *   special intervals:
+ *     `period` is not required for special intervals.
+ *     - `0` for endless plan, no estimated traffic information
+ *     - `-1` for plans resetting at the beginning of each month
  */
 
 // options
 const BAR_LENGTH = 16;
-const BLOCK_AVAIL = '◼︎', BLOCK_USED = '☑︎', BLOCK_ESTIMATED = '☒', BLOCK_BLANK = '◻︎';
+const BLOCK_AVAIL = '◼︎', BLOCK_USED = '☑︎', BLOCK_ESTIMATED = '✪', BLOCK_BLANK = '◻︎';
 const GOOD_COLOR = '#34C759', NORMAL_COLOR = '#007AFF', WARNING_COLOR = '#FFD60A', ERROR_COLOR = '#FF3B30';
 const DEFAULT_PLAN_PERIOD = 'm', DEFAULT_PLAN_INTERVAL = 1;
 
@@ -44,12 +53,11 @@ let planPeriod, planInterval;
     [url, planInterval, planPeriod] = $argument.split(';');
     if (!url) raiseError('Error: Argument should start with a URL.');
     planPeriod = planPeriod || DEFAULT_PLAN_PERIOD;
-    planInterval = parseInt(planInterval) || DEFAULT_PLAN_INTERVAL;
+    planInterval = parseInt(planInterval || DEFAULT_PLAN_INTERVAL);
 
     const headers = { 'User-Agent': 'Clash/1.8' };
     $httpClient.head({ url, headers }, (error, response) => {
         try {
-            var a = 1 / 0;
             // revealObject(this);
             if (error) throw error;
 
@@ -72,26 +80,34 @@ function handle(info) {
     const GB_FACTOR = 1024 * 1024 * 1024;
     const avail = (total - totalUsed) / GB_FACTOR;
 
-    let trafficEst = 0, dateElapsed = 0, quota = 0;
+    let trafficEst = 0, rateGap = 0;
     const now = new Date(), exp = extractInfo(info, 'expire') * 1000;
-    const isMonthPlanStarted = exp > now.getTime();
-    if (isMonthPlanStarted) {
-        const started = new Date(exp);
-        let reset;
-        if (planPeriod[0].toLowerCase() == 'd') {
-            while (started > now) started.setDate(started.getDate() - planInterval);
-            reset = new Date(started.getTime());
-            reset.setDate(reset.getDate() + planInterval);
+    if (exp > 0 && exp < now.getTime()) throw 'Subscription has expired.';
+
+    const isTimeLimited = exp > 0 || planInterval == 0;
+    if (isTimeLimited) {
+        let started, reset;
+        if (planInterval < 0) {
+            started = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+            reset = new Date(started);
+            reset.setMonth(reset.getUTCMonth() + 1);
         } else {
-            while (started > now) started.setMonth(started.getMonth() - planInterval);
-            reset = new Date(started.getTime());
-            reset.setMonth(reset.getMonth() + planInterval);
+            started = new Date(exp);
+            if (planPeriod[0].toLowerCase() == 'd') {
+                while (started > now) started.setUTCDate(started.getUTCDate() - planInterval);
+                reset = new Date(started.getTime());
+                reset.setUTCDate(reset.getUTCDate() + planInterval);
+            } else {
+                while (started > now) started.setUTCMonth(started.getUTCMonth() - planInterval);
+                reset = new Date(started.getTime());
+                reset.setUTCMonth(reset.getUTCMonth() + planInterval);
+            }
         }
 
-        dateElapsed = (now - started) / (reset - started);
+        const dateElapsed = (now - started) / (reset - started);
+        trafficRate = (dateElapsed - trafficUsed) / dateElapsed;
         trafficEst = totalUsed / dateElapsed;
-        quota = (total * dateElapsed - trafficUsed) / GB_FACTOR;
-        // content = `${started.toISOString()} - ${reset.toISOString()}\n`;
+        // content = `${started.toISOString()} - ${reset.toISOString()}\n${trafficRate.toFixed(2)}%, ${formatBytes(trafficEst)}\n`;
     }
 
     // render
@@ -100,25 +116,23 @@ function handle(info) {
         iconColor = ERROR_COLOR;
     else if (avail < 100)
         iconColor = WARNING_COLOR;
-    else if (avail > 300)
+    else if (avail > 200)
         iconColor = GOOD_COLOR;
     else
         iconColor = NORMAL_COLOR;
 
     const maxValue = Math.max(total, trafficEst);
     const blocks = Array(BAR_LENGTH);
-    if (isMonthPlanStarted) {
+    if (isTimeLimited) {
         blocks.fill(BLOCK_BLANK)
             .fill(BLOCK_AVAIL, 0, Math.ceil(total / maxValue * BAR_LENGTH));
         const index = (trafficEst > total ? BAR_LENGTH : Math.ceil(trafficEst / maxValue * BAR_LENGTH)) - 1;
         blocks.fill(BLOCK_ESTIMATED, index, index + 1);
 
-        if (quota > 100)
-            icon = 'airplane.departure';
-        else if (quota > 0)
-            icon = 'airplane.arrival';
+        if (iconColor == GOOD_COLOR)
+            icon = total > trafficEst ? 'airplane.departure' : 'airplane.arrival';
         else
-            icon = 'airplane';
+            icon = trafficRate < .3 ? 'airplane.arrival' : 'airplane';
     } else {
         blocks.fill(BLOCK_AVAIL);
         // always display as normal for a unlimited-time plan
@@ -129,7 +143,7 @@ function handle(info) {
     // output
     content += `[ ${blocks.join('')} ]`;
     content += `\n${BLOCK_USED} ${formatBytes(totalUsed)}`;
-    if (isMonthPlanStarted) content += ` / ${BLOCK_ESTIMATED} ${formatBytes(trafficEst)} est.`;
+    if (isTimeLimited) content += ` / ${BLOCK_ESTIMATED} ${formatBytes(trafficEst)} est.`;
 
     $done({ title, content, icon, 'icon-color': iconColor });
 };
