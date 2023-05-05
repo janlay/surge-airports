@@ -14,9 +14,9 @@
  * Airport 3 = content="Refresh to load data.", script-name=bar
  * 
  * [Script]
- * airport1 = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path
- * foo = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path;0
- * bar = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/token?header=true;-1
+ * airport1 = script-path=https://raw.githubusercontent.com/janlay/surge-airports/master/airport-bar.js, type=generic, argument=https://example.com/subscribe/path
+ * foo = script-path=https://raw.githubusercontent.com/janlay/surge-airports/master/airport-bar.js, type=generic, argument=https://example.com/subscribe/path;0
+ * bar = script-path=https://raw.githubusercontent.com/janlay/surge-airports/master/airport-bar.js, type=generic, argument=https://example.com/subscribe/token?header=true;-1
  * ---- config ends ----
  * 
  * `argument` in Section `Script`:
