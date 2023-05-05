@@ -9,12 +9,14 @@
  * 
  * ---- config starts ----
  * [Panel]
- * Dler = content="Refresh to load data.", script-name=dler
+ * Airport 1 = content="Refresh to load data.", script-name=airport1
+ * Airport 2 = content="Refresh to load data.", script-name=foo
+ * Airport 3 = content="Refresh to load data.", script-name=bar
  * 
  * [Script]
- * dler = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path
- * dler = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path;0
- * dler = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/token?header=true;-1
+ * airport1 = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path
+ * foo = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/path;0
+ * bar = script-path=airport-bar.js, type=generic, argument=https://example.com/subscribe/token?header=true;-1
  * ---- config ends ----
  * 
  * `argument` in Section `Script`:
