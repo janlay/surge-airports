@@ -2,7 +2,8 @@
 
 Surge机场信息面板
 
-<img width="300" alt="image" src="https://user-images.githubusercontent.com/94615/236473117-eca3c7c2-4b02-4944-ad9d-facd36fb0476.png">
+<img width="300" height="395" alt="SCR-20260118-tixg-2" src="https://github.com/user-attachments/assets/c5487609-440d-4e53-9a19-f3ed596dce56" />
+<img width="300" height="355" alt="SCR-20260118-tixg" src="https://github.com/user-attachments/assets/8c768282-8593-4997-b5ca-3022a10cbc9e" />
 
 ## 主要特性
 
