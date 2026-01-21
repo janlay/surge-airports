@@ -1,0 +1,1 @@
+{"subscription-userinfo": "upload=2362117017906; download=11820565099469; total=21474836480000; expire=1779587630; extra-info=foo"}

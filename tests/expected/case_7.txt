@@ -1,0 +1,2 @@
+Case 7
+ERROR: Missing or invalid total field
